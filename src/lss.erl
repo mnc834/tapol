@@ -21,7 +21,7 @@
 -type e_line() :: {[float()], float()}.
 %% @doc equuasion line, left-hand side coefficients and right-hand side member
 
--type e_pilynomial() :: [float()].
+-type e_polynomial() :: [float()].
 %% @doc Polynomial coefficients, the higherst's power coefficient comes first:
 %% P(X) = An * X^n + An-1 * X^(n-1) + .. + A0 yields coefficients:
 %% [An, An-1, .. A0]
@@ -33,8 +33,7 @@
 
 
 %% API
--export([extract_submatrix/1,
-  find_column_with_lowest_rank/1]).
+-export([get_least_squares_solution/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec extract_submatrix(#matrix{}) -> #matrix{}.
@@ -215,7 +214,7 @@ gauss_solution(M) ->
   when X :: float(),
        Y :: float(),
        Polynomial_degree :: pos_integer(),
-       Result :: {ok, e_pilynomial()} | {error, Reason :: term()}.
+       Result :: {ok, e_polynomial()} | {error, Reason :: term()}.
 %% @doc calculates polynomial approximation for the set of data [{X, Y}] using least squares method
 %%      the resulting polynom should have degree equals Polynomial_degree
 get_least_squares_solution(V, P_degree) ->
