@@ -11,20 +11,17 @@
 %%% The list of floats is the least of the polinomial coefficiants when the
 %%% coefficient with highest order comes first
 %%%-------------------------------------------------------------------
--module(lss).
+-module(tapol_lss).
 -author("PKQ874").
 
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+-endif.
 
--define(EPSILON, 1.0e-10).
+-include("tapol.hrl").
 
 -type e_line() :: {[float()], float()}.
 %% @doc equuasion line, left-hand side coefficients and right-hand side member
-
--type e_polynomial() :: [float()].
-%% @doc Polynomial coefficients, the higherst's power coefficient comes first:
-%% P(X) = An * X^n + An-1 * X^(n-1) + .. + A0 yields coefficients:
-%% [An, An-1, .. A0]
 
 -record(matrix, {
   lines :: [e_line()],                  %%lines of the equasion matrix
@@ -214,7 +211,7 @@ gauss_solution(M) ->
   when X :: float(),
        Y :: float(),
        Polynomial_degree :: pos_integer(),
-       Result :: {ok, e_polynomial()} | {error, Reason :: term()}.
+       Result :: {ok, tapol_epol:e_polynomial()} | {error, Reason :: term()}.
 %% @doc calculates polynomial approximation for the set of data [{X, Y}] using least squares method
 %%      the resulting polynom should have degree equals Polynomial_degree
 get_least_squares_solution(V, P_degree) ->
@@ -273,6 +270,8 @@ get_least_squares_solution(V, P_degree) ->
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Local funs
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec remove_first_line(#matrix{}) -> #matrix{}.
 %% @doc removes the first line from the matrix
 remove_first_line(#matrix{lines = [_H_line| T_line]} = M) ->
@@ -283,10 +282,11 @@ remove_first_line(#matrix{lines = [_H_line| T_line]} = M) ->
 remove_first_column(#matrix{lines = Lines, column_order = [_H_order | T_order]} = M) ->
   New_lines = [{T_line, Rhs} || {[_H_line | T_line], Rhs} <- Lines],
   M#matrix{lines = New_lines, column_order = T_order}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-compare_vals(A, B) ->
-  abs(A - B) < ?EPSILON.
+%%%% Unit tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-ifdef(TEST).
 extract_submatrix_test_() ->
 
   M = #matrix{
@@ -504,9 +504,9 @@ gauss_elimination_test_() ->
         true ->
           Compare_lines_fun =
             fun({{Lhs_a, Rhs_a}, {Lhs_b, Rhs_b}}) ->
-              case compare_vals(Rhs_a, Rhs_b) of
+              case tapol_utils:are_equal(Rhs_a, Rhs_b) of
                 true ->
-                  lists:all(fun({A, B}) -> compare_vals(A, B) end, lists:zip(Lhs_a, Lhs_b));
+                  lists:all(fun({A, B}) -> tapol_utils:are_equal(A, B) end, lists:zip(Lhs_a, Lhs_b));
                 false ->
                   {error, right_hand_sides_different, Rhs_a, Rhs_b}
               end
@@ -587,7 +587,7 @@ gauss_solution_test_() ->
       Line_fun =
         fun({Lhs, Rhs}) ->
           Sum = lists:foldl(Sum_fun, 0, lists:zip(Lhs, V)),
-          compare_vals(Sum, Rhs)
+          tapol_utils:are_equal(Sum, Rhs)
         end,
       lists:all(Line_fun, Lines)
     end,
@@ -634,14 +634,6 @@ gauss_solution_test_() ->
   ].
 
 get_sol_test_() ->
-  Calc_polinom_val =
-    fun([H | T], X) ->
-      Foldl_fun =
-        fun(A, S) ->
-          S * X + A
-        end,
-      lists:foldl(Foldl_fun, H, T)
-    end,
   X = [A * 0.0001 || A <- lists:seq(1, 50000)],
 
   V1 = [0, 0, 1, 0],
@@ -651,8 +643,10 @@ get_sol_test_() ->
   Base = [V1, V2, V3],
   Map_fun =
     fun(V) ->
-      P = [{X_val, Calc_polinom_val(V, X_val)} || X_val <- X],
+      P = [{X_val, tapol_epol:calc_val(V, X_val)} || X_val <- X],
       {ok, S} = get_least_squares_solution(P, length(V) - 1),
       ?_assertEqual(true, lists:all(fun({A, B}) -> abs(A - B) < 0.01 end, lists:zip(V, S)))
       end,
   lists:map(Map_fun, Base).
+
+-endif.
