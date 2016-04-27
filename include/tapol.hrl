@@ -8,6 +8,11 @@
 %%%-------------------------------------------------------------------
 -author("PKQ874").
 
+-ifndef(TAPOL_HRL).
+-define(TAPOL_HRL, 1).
+
 %% if a float() is less than EPSILONE, it is considered to be 0
--define(EPSILON, 1.0e-10).
+-define(EPSILON, 1.0e-50).
+
+-endif.
 
