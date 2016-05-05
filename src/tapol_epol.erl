@@ -24,7 +24,8 @@
 %% API
 -export([calc_val/2,
   derivative/1,
-  stretch/2
+  stretch/2,
+  add/2
 ]).
 
 -spec calc_val(P :: e_polynomial(), X :: float()) -> float().
@@ -64,6 +65,27 @@ stretch(P, S) ->
   {L, _} = lists:mapfoldr(Foldr_fun, 1, P),
   L.
 
+-spec add(P1 :: e_polynomial(), P2 :: e_polynomial()) -> e_polynomial().
+%% @doc adds polynomials
+add(P1, P2) ->
+  N1 = length(P1),
+  N2 = length(P2),
+
+  {L1, L2} =
+    case N1 =:= N2 of
+      true ->
+        {P1, P2};
+      false ->
+        N = abs(N1 - N2),
+        L = [0 || _ <- lists:seq(1, N)],
+        case N1 > N2 of
+          true ->
+            {P1, lists:append(L, P2)};
+          false ->
+            {lists:append(L, P1), P2}
+        end
+    end,
+  lists:map(fun({A, B}) -> A + B end, lists:zip(L1, L2)).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Unit tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -133,6 +155,25 @@ strech_test_() ->
   [
     ?_assertEqual(true, are_polynomials_equal(Res_1, P_s)),
     ?_assertEqual(true, tapol_utils:are_equal(Res_2, Res_3))
+  ].
+
+add_test_() ->
+  P1 = [1, 2, 3, 4, 5],
+  P2 = [4.1, 5.2, -6.3],
+  Res = [1, 2, 7.1, 9.2, -1.3],
+
+  Res_1 = add(P1, P2),
+  Res_2 = add(P2, P1),
+  Res_3 = add([], P1),
+  Res_4 = add(P2, []),
+  Res_5 = add([], []),
+
+  [
+    ?_assertEqual(true, are_polynomials_equal(Res, Res_1)),
+    ?_assertEqual(true, are_polynomials_equal(Res, Res_2)),
+    ?_assertEqual(true, are_polynomials_equal(P1, Res_3)),
+    ?_assertEqual(true, are_polynomials_equal(P2, Res_4)),
+    ?_assertEqual(true, are_polynomials_equal([], Res_5))
   ].
 
 -endif.
