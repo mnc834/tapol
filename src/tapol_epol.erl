@@ -25,7 +25,8 @@
 -export([calc_val/2,
   derivative/1,
   stretch/2,
-  add/2
+  add/2,
+  shift/3
 ]).
 
 -spec calc_val(P :: e_polynomial(), X :: float()) -> float().
@@ -86,6 +87,45 @@ add(P1, P2) ->
         end
     end,
   lists:map(fun({A, B}) -> A + B end, lists:zip(L1, L2)).
+
+-spec shift(P :: e_polynomial(), Dx :: float(), Dy :: float()) -> e_polynomial().
+%% @doc implements transformation P(X) = P(X + Dx) + Dy
+shift(P, Dx, Dy) ->
+  Fold_fun =
+    fun(C, {B, [Pow_h | _] = Pow, V}) ->
+      %% C is the current coefficient of polynomial P
+      %% B is the current raw of the Pascal's triangle
+      %% P is the current power list of Dx,
+      %% V is the previous list of binomial polinomials
+      V_add = lists:map(fun({Pow_i, B_i}) -> Pow_i * B_i * C end, lists:zip(Pow, B)),
+      Pow_new = [Pow_h * Dx | Pow],
+      B_new = cals_binomial_coefficients(B),
+      {B_new, Pow_new, [lists:reverse(V_add) | V]}
+    end,
+  {_, _, V} = lists:foldr(Fold_fun, {[1], [1], []}, P),
+
+  %%sum all the binomial polynomials
+  lists:foldl(fun(P_i, Acc) -> add(P_i, Acc) end, [Dy], V).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% internal functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-spec cals_binomial_coefficients(L :: [integer()]) -> [integer()].
+%% @doc calculates binomial coefficients for the next Pascal's triangle row
+%% when the previous row is given.
+cals_binomial_coefficients([]) ->
+  %%the first row
+  [1];
+cals_binomial_coefficients([1]) ->
+  %%the second row
+  [1, 1];
+cals_binomial_coefficients([H | T]) ->
+  {V, _} = lists:foldl(
+    fun(X, {L, Last}) ->
+      {[X + Last | L], X}
+    end, {[], H}, T),
+  [1 | lists:reverse(V) ++ [1]].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Unit tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -130,8 +170,8 @@ derivative_test_() ->
 
 
   Res_fun =
-    fun Derivative(P) ->
-      try derivative(P) of
+    fun Derivative(P_) ->
+      try derivative(P_) of
         D_p ->
           [D_p | Derivative(D_p)]
       catch
@@ -175,5 +215,37 @@ add_test_() ->
     ?_assertEqual(true, are_polynomials_equal(P2, Res_4)),
     ?_assertEqual(true, are_polynomials_equal([], Res_5))
   ].
+
+cals_binomial_coefficients_test_() ->
+
+  Res_1 = cals_binomial_coefficients([]),
+  Res_2 = cals_binomial_coefficients(Res_1),
+  Res_3 = cals_binomial_coefficients(Res_2),
+  Res_4 = cals_binomial_coefficients(Res_3),
+  Res_5 = cals_binomial_coefficients(Res_4),
+  Res_6 = cals_binomial_coefficients(Res_5),
+
+  [
+    ?_assertEqual(true, are_polynomials_equal([1], Res_1)),
+    ?_assertEqual(true, are_polynomials_equal([1, 1], Res_2)),
+    ?_assertEqual(true, are_polynomials_equal([1, 2, 1], Res_3)),
+    ?_assertEqual(true, are_polynomials_equal([1, 3, 3, 1], Res_4)),
+    ?_assertEqual(true, are_polynomials_equal([1, 4, 6, 4, 1], Res_5)),
+    ?_assertEqual(true, are_polynomials_equal([1, 5, 10 ,10, 5, 1], Res_6))
+  ].
+
+shift_test_() ->
+  P1 = [10.1e-5, 9.9, -8.8, 4.4, -3.456, 1],
+  V_dxy = [{12.1, 1.0}, {-1.1, 0.0}, {-5.5, 0.0}],
+  X = 1.12,
+  Y = calc_val(P1, X),
+
+  lists:map(
+    fun({Dx, Dy}) ->
+      P_shift = shift(P1, Dx, Dy),
+      Res = calc_val(P_shift, X - Dx) - Dy,
+      Descr = "{" ++ float_to_list(Dx) ++ ", " ++ float_to_list(Dy) ++ "}",
+      {Descr, ?_assertEqual(true, tapol_utils:are_equal(Y, Res))}
+    end, V_dxy).
 
 -endif.
