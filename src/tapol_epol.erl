@@ -23,7 +23,8 @@
 
 %% API
 -export([calc_val/2,
-  derivative/1
+  derivative/1,
+  stretch/2
 ]).
 
 -spec calc_val(P :: e_polynomial(), X :: float()) -> float().
@@ -52,10 +53,27 @@ derivative(P) ->
   {D_p, _} = lists:split(N - 1, L),
   D_p.
 
+-spec stretch(P :: e_polynomial(), S :: float()) -> e_polynomial().
+%% @doc implements streching by substituting the arguments X = S * X
+%%      returns the new coefficients
+stretch(P, S) ->
+  Foldr_fun =
+    fun(C, V) ->
+      {C * V, V * S}
+    end,
+  {L, _} = lists:mapfoldr(Foldr_fun, 1, P),
+  L.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Unit tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -ifdef(TEST).
+
+are_polynomials_equal(P1, P2) when is_list(P1), is_list(P2) ->
+  lists:all(fun({A, B}) -> tapol_utils:are_equal(A, B) end, lists:zip(P1, P2));
+are_polynomials_equal(A1, A2) ->
+  A1 =:= A2.
+
 calc_val_test_() ->
   X = 100,
 
@@ -101,13 +119,20 @@ derivative_test_() ->
     end,
   Result = Res_fun(P),
 
-  Compare_polynomials =
-    fun(P1, P2) when is_list(P1), is_list(P2)->
-      lists:all(fun({A, B}) -> tapol_utils:are_equal(A, B) end, lists:zip(P1, P2));
-      (A1, A2) ->
-        A1 =:= A2
-    end,
+  [?_assertEqual(true, are_polynomials_equal(P1, P2)) || {P1, P2} <- lists:zip(Derivatives, Result)].
 
-  [?_assertEqual(true, Compare_polynomials(P1, P2)) || {P1, P2} <- lists:zip(Derivatives, Result)].
+strech_test_() ->
+  P = [1, 2, 3],
+  S = 10.0,
+  X = 11.1,
+  P_s = [100, 20, 3],
+
+  Res_1 = stretch(P, S),
+  Res_2 = calc_val(P, S * X),
+  Res_3 = calc_val(Res_1, X),
+  [
+    ?_assertEqual(true, are_polynomials_equal(Res_1, P_s)),
+    ?_assertEqual(true, tapol_utils:are_equal(Res_2, Res_3))
+  ].
 
 -endif.
