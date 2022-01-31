@@ -29,7 +29,7 @@
   shift/3
 ]).
 
--spec calc_val(P :: e_polynomial(), X :: float()) -> float().
+-spec calc_val(P :: e_polynomial(), X :: number()) -> float().
 %% @doc calculates value of polynomial P in the point X,
 %%      for an empty polynomials throughs exception empty_polynomial
 calc_val([], _) ->
@@ -56,7 +56,7 @@ derivative(P) ->
   D_p.
 
 -spec stretch(P :: e_polynomial(), S :: float()) -> e_polynomial().
-%% @doc implements streching by substituting the arguments X = S * X
+%% @doc implements stretching by substituting the arguments X = S * X
 %%      returns the new coefficients
 stretch(P, S) ->
   Foldr_fun =
